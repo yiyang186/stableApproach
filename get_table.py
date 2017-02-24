@@ -35,7 +35,7 @@ for i, fileName in enumerate(files):
         rollSstick = rollCaptSstick + rollFoSstick
         rollCrossRate = ((rollSstick[:-1] * rollSstick[1:]) < 0).sum() / float(rollSstick.size - 1)
 
-        crossRate = np.diff(np.sqrt(pitchSstick ** 2 + rollSstick ** 2) > 0).sum() / float(pitchSstick.size - 1) / 2.0
+        crossRate = np.diff(np.sqrt(pitchSstick ** 2 + rollSstick ** 2) > 0).sum() / float(pitchSstick.size - 1)
         var_gl = np.sqrt(df['_GLIDE'].values ** 2 + df['_LOC'].values ** 2).var()
         new = pd.DataFrame({'FILENAME':fileName, 
                                             'VAR_GL': var_gl,
