@@ -1,13 +1,16 @@
 from settings import *
 
 t1 = time.time()
-table = pd.DataFrame(columns=['FILENAME', 'VAR_GL', 'VAR_G', 'VAR_L', 'CROSS_RATE', 'PITCH_CROSS_RATE', 'ROLL_CROSS_RATE', 'LABEL'])
+table = pd.DataFrame(columns=['FILENAME', 'VAR_GL', 'VAR_G', 'VAR_L',\
+                              'MIX_CROSS_RATE', 'PITCH_CROSS_RATE', 'ROLL_CROSS_RATE', \
+                              'OPERATIVE_RATE', 'PITCH_OPERATIVE_RATE', 'ROLL_OPERATIVE_RATE', \
+                              'LABEL'])
 skip = 0
 for i, fileName in enumerate(files):
     try:
         df = pd.read_csv(wd+fileName, usecols=usedColumns)
         df = df.fillna(method='pad')
-        df = df.loc[(df['_ALTITUDE'] < 1000) & (df['_ALTITUDE'] > 100), :]
+        df = df.loc[(df['_ALTITUDE'] < 1000) & (df['_ALTITUDE'] >100), :]
         var_g = df['_GLIDE'].var()
         var_l = df['_LOC'].var()
 
@@ -26,24 +29,29 @@ for i, fileName in enumerate(files):
 
         pitchCaptSstick = df[pitchCaptColumns].values.ravel()
         pitchFoSstick = df[pitchFoColumns].values.ravel()
-
         pitchSstick = pitchCaptSstick + pitchFoSstick
-        pitchCrossRate = ((pitchSstick[:-1] * pitchSstick[1:]) < 0).sum() / float(pitchSstick.size - 1)
-
+        pitchCrossRate = ((pitchSstick[:-1] * pitchSstick[1:]) < -1.0).sum() / float(pitchSstick.size - 1)
+        pitchOperativeRate = np.diff(np.abs(pitchSstick) < 1.0).sum() / float(pitchSstick.size - 1)
+        
         rollCaptSstick = df[rollCaptColumns].values.ravel()
         rollFoSstick = df[rollFoColumns].values.ravel()
         rollSstick = rollCaptSstick + rollFoSstick
-        rollCrossRate = ((rollSstick[:-1] * rollSstick[1:]) < 0).sum() / float(rollSstick.size - 1)
-
-        crossRate = np.diff(np.sqrt(pitchSstick ** 2 + rollSstick ** 2) > 0).sum() / float(pitchSstick.size - 1)
+        rollCrossRate = ((rollSstick[:-1] * rollSstick[1:]) < -1.0).sum() / float(rollSstick.size - 1)
+        rollOperativeRate = np.diff(np.abs(rollSstick) < 1.0).sum() / float(rollSstick.size - 1)
+        
+        mixCrossRate = pitchCrossRate + rollCrossRate
+        operativeRate = np.diff(np.sqrt(pitchSstick ** 2 + rollSstick ** 2) > 1.0).sum() / float(pitchSstick.size - 1)
         var_gl = np.sqrt(df['_GLIDE'].values ** 2 + df['_LOC'].values ** 2).var()
-        new = pd.DataFrame({'FILENAME':fileName, 
+        new = pd.DataFrame({'FILENAME': fileName, 
                                             'VAR_GL': var_gl,
-                                            'VAR_G':var_g,
-                                            'VAR_L':var_l, 
-                                            'CROSS_RATE': crossRate,
-                                            'PITCH_CROSS_RATE':pitchCrossRate, 
-                                            'ROLL_CROSS_RATE':rollCrossRate,
+                                            'VAR_G': var_g,
+                                            'VAR_L': var_l, 
+                                            'MIX_CROSS_RATE': mixCrossRate,
+                                            'PITCH_CROSS_RATE': pitchCrossRate, 
+                                            'ROLL_CROSS_RATE': rollCrossRate,
+                                            'OPERATIVE_RATE': operativeRate,
+                                            'PITCH_OPERATIVE_RATE': pitchOperativeRate,
+                                            'ROLL_OPERATIVE_RATE': rollOperativeRate, 
                                             'LABEL': label},
                                             index=[i])
         table = table.append(new, ignore_index=True)
